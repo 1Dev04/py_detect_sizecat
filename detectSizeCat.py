@@ -25,12 +25,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Load env variables
 load_dotenv() 
 
 DB_CONFIG = {
     'host': os.getenv('DB_HOST'),
+    'port': os.getenv('DB_PORT'),
     'database': os.getenv('DB_NAME'),
     'user': os.getenv('DB_USER'),
     'password': os.getenv('DB_PASSWORD')
@@ -49,10 +49,7 @@ def get_db_connection():
         return None
     
 def detect_cat_size(image_bytes):
-     """
-    ตรวจจับแมวและวัดขนาด
-  
-    """
+     """ ตรวจจับแมวและวัดขนาด"""
      nparr = np.frombuffer(image_bytes, np.uint8)
      img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
@@ -102,7 +99,7 @@ def categorize_size(width_cm, height_cm):
         return "Large (แมวโต)"
     else:
         return "Extra Large (แมวใหญ่มาก ไม่มี size )"
-
+    
 
 def save_to_database(cat_data, image_bytes):
     """ บันทึกข้อมูลการตรวจจับลงในฐานข้อมูล """
@@ -110,3 +107,61 @@ def save_to_database(cat_data, image_bytes):
     if not connection:
         raise Exception("Database connection failed")
     
+    try: 
+        cursor = connection.cursor()
+        image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+
+        query = """
+                  
+        """
+        values = (
+            cat_data.get('name', 'Unknown Cat'),
+            'Cat',
+            cat_data.get('description', 'Detected cat'),
+            cat_data.get('size_category', 'Unknown'),
+            cat_data.get('price', 0.00),
+            cat_data.get('width_cm', 0),
+            cat_data.get('height_cm', 0),
+            cat_data.get('confidence', 0),
+            str(cat_data.get('bbox', [])),
+            image_base64[:65000],  # จำกัดขนาด (หรือเก็บเป็นไฟล์)
+            datetime.now()
+        )
+
+        cursor.execute(query, values)
+        connection.commit()
+
+        cat_id = cursor.lastrowid
+        return cat_id
+        
+    except Error as e:
+        print(f"Error saving to database: {e}")
+        raise e
+    finally: 
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+@app.get("/")
+def read_root():
+    return {"message": "Cat Detection API is running.", "version" : "1.0"}
+
+@app.post("/api/detectsize/cat")
+async def detect_cat(file: UploadFile = File(...)):
+    """ API Endpoint สำหรับตรวจจจับและวัดขนาดแมว"""
+    try: 
+        contents = await file.read()
+
+        detections = detect_cat_size(contents)
+        if not detections:
+            return {
+                "success": False,
+                "message": "No cat detected in the image.",
+                "data": None
+            }
+        
+        main_cat = max(detections, key=lambda x: x['confidence'])
+
+        cat_id = save_to_database(main_cat, contents)
+
+        response_data = {}
