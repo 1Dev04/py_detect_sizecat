@@ -29,7 +29,6 @@ app.add_middleware(
 UPLOAD_DIR = "uploaded_images"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-
 # Load env variables
 load_dotenv() 
 
@@ -141,3 +140,58 @@ def detect_cat_size(image_bytes):
         
         return cat_detection
     
+def save_cat_to_db(cat_data, image_path: str):
+    """บันทึกข้อมูลแมวลงฐานข้อมูล"""
+    connection = get_db_connection()
+    if not connection:
+        raise Exception("Cannot connect to database")
+    try:
+        cursor = connection.cursor()
+
+        query = """
+            INSERT INTO cats 
+            (name, breed, age, weight, size_category,
+                width_cm, height_cm, confidence, image_path, detected_at)
+             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)   
+        """
+
+        values = (
+            cat_data.get('name', 'Unknown Cat'),
+            cat_data.get('breed', 'Unknown'),
+            cat_data.get('age'),
+            cat_data.get('weight'),
+            cat_data.get('size_category'),
+            cat_data.get('width_cm'),
+            cat_data.get('height_cm'),
+            cat_data.get('confidence'),
+            image_path,
+            datetime.now()
+        )
+
+        cursor.execute(query, values)
+        connection.commit()
+
+        cat_id = cursor.lastrowid
+        return cat_id
+    
+    except Error as e:
+        print(f"Database error: {e}")
+        raise
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+def get_clothing_recommen(size_category: str, weight: float):
+    """ แนะนำเสื้อผ้าสำหรับแมว """
+    connection = get_db_connection()
+
+    if not connection:
+        return []
+
+    # try:
+    #     cursor = connection.cursor(dictionary=True)
+
+    #     query = """
+
+    #     """
