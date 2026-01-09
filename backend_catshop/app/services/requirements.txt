@@ -1,0 +1,24 @@
+# fastapi==0.109.0
+# uvicorn[standard]==0.27.0
+# python-multipart==0.0.6
+# python-dotenv==1.0.0
+
+# # Database
+# mysql-connector-python==8.2.0
+# # หรือใช้ pymysql==1.1.0 (เร็วกว่า)
+
+# # Image Processing
+# opencv-python-headless==4.9.0.80
+# Pillow==10.2.0
+# numpy==1.26.3
+
+# # YOLO
+# ultralytics==8.1.0
+# torch==2.1.2
+# torchvision==0.16.2
+
+# # HTTP Requests
+# requests==2.31.0
+
+# # Security
+# cryptography==42.0.0
