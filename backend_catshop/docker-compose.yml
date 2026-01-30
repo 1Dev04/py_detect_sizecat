@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16
+    container_name: cat_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: catuser
+      POSTGRES_PASSWORD: catpassword
+      POSTGRES_DB: catdb
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - catshop_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catuser -d catdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # FastAPI Application
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: catshop_fastapi
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://catuser:catpassword@postgres:5432/catdb
+      ENVIRONMENT: development
+      PYTHONPATH: /app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    working_dir: /app
+    networks:
+      - catshop_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  catshop_network:
+    driver: bridge

@@ -1,0 +1,13 @@
+# YOLO / ML
+*.pt
+*.onnx
+*.weights
+
+# dataset
+dataset/
+images/
+runs/
+
+# cache
+__pycache__/
+*.log
