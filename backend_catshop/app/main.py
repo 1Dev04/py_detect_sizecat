@@ -5,6 +5,7 @@ import os
 from contextlib import asynccontextmanager
 
 from app.api.callback_flutter import router as home_router 
+from app.api.search import router as search_router 
 
 db_pool = None
 
@@ -36,6 +37,7 @@ app.add_middleware(
 
 # 👇👇👇 สำคัญมาก
 app.include_router(home_router)
+app.include_router(search_router)
 
 # Health
 @app.get("/health")

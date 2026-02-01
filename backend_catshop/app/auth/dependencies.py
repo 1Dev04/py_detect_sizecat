@@ -5,51 +5,84 @@ from firebase_admin import auth, credentials
 import os
 from functools import lru_cache
 
-# Initialize Firebase Admin SDK (call one time)
+# =========================
+# Firebase Config
+# =========================
+
+USE_FIREBASE = os.getenv("USE_FIREBASE", "false").lower() == "true"
+
 @lru_cache()
-def initialize_firebase():
-    """Initialize Firebase Admin SDK"""
-    try: 
-        cred_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY", "serviceAccountKey.json")
+def initialize_firebase() -> bool:
+    """
+    Initialize Firebase Admin SDK (optional)
+    Returns True if initialized, False otherwise
+    """
+    if not USE_FIREBASE:
+        print("🚫 Firebase Admin SDK disabled (USE_FIREBASE=false)")
+        return False
+
+    try:
+        cred_path = os.getenv(
+            "FIREBASE_SERVICE_ACCOUNT_KEY",
+            "serviceAccountKey.json"
+        )
+
+        if not os.path.exists(cred_path):
+            raise FileNotFoundError(f"Service account key not found: {cred_path}")
+
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
+
         print("✅ Firebase Admin SDK initialized")
+        return True
+
     except Exception as e:
-        print(f"⚠️  Firebase initialization error: {e}")
+        print(f"⚠️ Firebase initialization error: {e}")
+        return False
 
 
-# initialize เมื่อ import module 
-initialize_firebase()
+FIREBASE_ENABLED = initialize_firebase()
 
-# Security scheme
-security = HTTPBearer()
+# =========================
+# Security
+# =========================
+
+security = HTTPBearer(auto_error=False)
+
+# =========================
+# Firebase Token Verify
+# =========================
 
 async def verify_firebase_token(
-        credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> dict:
     """
-    Verify Firebase ID Token
-
-    Returns: 
-        dict: {
-            "uid": "user_firebase_uid",
-            "email": "user123@example.com"
-            "name": "User Name"
-        }
+    Verify Firebase ID Token (required auth)
     """
+    if not FIREBASE_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Firebase authentication is disabled"
+        )
+
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header missing"
+        )
+
     token = credentials.credentials
 
-    try: 
-        # Verify Token by Firebase Admin SDK
+    try:
         decoded_token = auth.verify_id_token(token)
 
         return {
-            "uid": decoded_token["uid"],
-            "email": decoded_token["email"],
-            "name": decoded_token["name"],
-            "picture": decoded_token["picture"],
+            "uid": decoded_token.get("uid"),
+            "email": decoded_token.get("email"),
+            "name": decoded_token.get("name"),
+            "picture": decoded_token.get("picture"),
         }
-    
+
     except auth.InvalidIdTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -60,24 +93,28 @@ async def verify_firebase_token(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired"
         )
-    except Exception as e: 
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Authentication failed: {str(e)}"
         )
-# endpoint not auth (optional)
+
+# =========================
+# Optional Firebase Auth
+# =========================
+
 async def optional_firebase_token(
     credentials: HTTPAuthorizationCredentials = Depends(security)
-) -> dict | None: 
+) -> dict | None:
     """
-        Optional Firebase token verification
-        Returns None if no token provided
+    Optional Firebase token verification
+    - Returns None if Firebase disabled
+    - Returns None if no token
     """
-    if not credentials:
+    if not FIREBASE_ENABLED or not credentials:
         return None
-    
-    try: 
+
+    try:
         return await verify_firebase_token(credentials)
-    except: 
+    except Exception:
         return None
-    

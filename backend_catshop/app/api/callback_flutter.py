@@ -44,26 +44,30 @@ async def get_home_advertiment():
             query = """
                
                 SELECT 
-                         id,
-                image_url,
-                images,
-                clothing_name,
-                description,
-                category,
-                size_category,
-                CONCAT(price, ' THB') as price,
-                CONCAT(discount_price, ' THB') as discount_price,
-                CONCAT(ROUND(((price - discount_price) / price) * 100, 0), '%') as discount_percent,
-                gender,
-                clothing_like,
-                clothing_seller,
-                stock,
-                breed,
-                created_at
-                FROM cat_clothing
-                WHERE is_active = true
-                ORDER by RANDOM()
-                LIMIT 10;
+        id,
+        image_url,
+        images,
+        clothing_name,
+        description,
+        category,
+        size_category,
+        price,
+        discount_price,
+        CASE 
+            WHEN discount_price IS NOT NULL AND discount_price < price 
+            THEN ROUND(((price - discount_price) / price) * 100, 0)
+            ELSE NULL
+        END as discount_percent,
+        gender,
+        clothing_like,
+        clothing_seller,
+        stock,
+        breed,
+        created_at
+    FROM cat_clothing
+    WHERE is_active = true
+    ORDER BY RANDOM()
+    LIMIT 10;
             """
             
             rows = await connection.fetch(query)
@@ -95,29 +99,30 @@ async def get_home_advertiment_detail(item_id: int):
         
         async with pool.acquire() as connection:
             query = """
-                 SELECT 
-                    id,
-                image_url,
-                images,
-                clothing_name,
-                description,
-                category,
-                size_category,
-                CONCAT(price, ' THB') as price,
-                CONCAT(discount_price, ' THB') as discount_price,
-                CONCAT(ROUND(((price - discount_price) / price) * 100, 0), '%') as discount_percent,
-                gender,
-                clothing_like,
-                clothing_seller,
-                stock,
-                breed,
-                created_at
-                FROM cat_clothing
-                WHERE id = $1
-  				AND is_active = true
- 				AND discount_price IS NOT NULL
-  				AND discount_price < price   
-
+                  SELECT 
+        id,
+        image_url,
+        images,
+        clothing_name,
+        description,
+        category,
+        size_category,
+        price,
+        discount_price,
+        CASE 
+            WHEN discount_price IS NOT NULL AND discount_price < price 
+            THEN CONCAT(ROUND(((price - discount_price) / price) * 100, 0), '%')
+            ELSE NULL
+        END as discount_percent,
+        gender,
+        clothing_like,
+        clothing_seller,
+        stock,
+        breed,
+        created_at
+    FROM cat_clothing
+    WHERE id = $1
+    AND is_active = true
             """
             
             row = await connection.fetchrow(query, item_id)
@@ -151,19 +156,28 @@ async def get_clothing_shop_like():
                	    SELECT 
                     id,
                     image_url,
+                    images,
                     clothing_name,
                     description,
-                    CONCAT('THB ', price) as price,
-                    images,
+                    category,
+                    size_category,
+                    price,
+                    discount_price,
+                    CASE 
+                        WHEN discount_price IS NOT NULL AND discount_price < price 
+                        THEN ROUND(((price - discount_price) / price) * 100, 0)
+                        ELSE NULL
+                    END as discount_percent,
                     gender,
-                    breed,
-                    CONCAT('Size: ', size_category) as size_category,
+                    clothing_like,
+                    clothing_seller,
                     stock,
-                    clothing_like
+                    breed,
+                    created_at
                 FROM cat_clothing
                 WHERE is_active = true
-                ORDER BY clothing_like desc 
-                LIMIT 5;
+                ORDER BY clothing_like DESC
+                LIMIT 10;
             """
             
             rows = await connection.fetch(query)
@@ -199,19 +213,28 @@ async def get_clothing_shop_seller():
                 SELECT 
                     id,
                     image_url,
+                    images,
                     clothing_name,
                     description,
-                    CONCAT('THB ', price) as price,
-                    images,
+                    category,
+                    size_category,
+                    price,
+                    discount_price,
+                    CASE 
+                        WHEN discount_price IS NOT NULL AND discount_price < price 
+                        THEN ROUND(((price - discount_price) / price) * 100, 0)
+                        ELSE NULL
+                    END as discount_percent,
                     gender,
-                    breed,
-                    CONCAT('Size: ', size_category) as size_category,
+                    clothing_like,
+                    clothing_seller,
                     stock,
-                    clothing_seller
+                    breed,
+                    created_at
                 FROM cat_clothing
                 WHERE is_active = true
-                ORDER BY clothing_seller desc
-                LIMIT 5;
+                ORDER BY clothing_seller DESC
+                LIMIT 10;
             """
             
             rows = await connection.fetch(query)
@@ -422,6 +445,11 @@ async def get_notifications_news_detail(item_id: int):
             status_code=500,
             detail="Internal server error"
         )
+
+
+
+
+
 
 # ============================================
 # CAT DETECTION & PREDICTION ENDPOINTS (Auth Required)
