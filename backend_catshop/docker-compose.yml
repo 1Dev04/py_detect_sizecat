@@ -34,12 +34,6 @@ services:
     environment:
       # Database
       - DATABASE_URL=postgresql://catuser:catpassword@postgres:5432/catdb
-      
-      # Firebase
-      - USE_FIREBASE=true
-      
-      # Timezone
-      - TZ=Asia/Bangkok
     volumes:
       - ./app:/app/app
     working_dir: /app
