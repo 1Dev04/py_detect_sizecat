@@ -12,8 +12,8 @@ from app.core.firebase import init_firebase
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_firebase()
     await create_db_pool()
+    init_firebase()
     print("🚀 App startup complete")
     yield
     await close_db_pool()
