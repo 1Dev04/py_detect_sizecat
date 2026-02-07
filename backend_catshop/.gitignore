@@ -12,5 +12,3 @@ runs/
 __pycache__/
 *.log
 
-serviceAccountKey.json
-backend_catshop/serviceAccountKey.json

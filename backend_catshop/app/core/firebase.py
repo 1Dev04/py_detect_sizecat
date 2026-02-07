@@ -5,10 +5,10 @@ from firebase_admin import credentials
 def init_firebase():
     if os.getenv("USE_FIREBASE", "false").lower() != "true":
         print("🚫 Firebase disabled, skipping init")
-        return
+        return False
 
     if firebase_admin._apps:
-        return
+        return True
 
     required_envs = [
         "FIREBASE_PROJECT_ID",
@@ -18,17 +18,19 @@ def init_firebase():
 
     missing = [k for k in required_envs if not os.getenv(k)]
     if missing:
-        raise RuntimeError(f"❌ Missing Firebase envs: {', '.join(missing)}")
+        print(f"⚠️ Firebase enabled but missing envs: {', '.join(missing)}")
+        print("👉 Skipping Firebase init")
+        return False
 
-    try:
-        cred = credentials.Certificate({
-            "type": "service_account",
-            "project_id": os.environ["FIREBASE_PROJECT_ID"],
-            "client_email": os.environ["FIREBASE_CLIENT_EMAIL"],
-            "private_key": os.environ["FIREBASE_PRIVATE_KEY"].replace("\\n", "\n"),
-        })
+    cred = credentials.Certificate({
+        "type": "service_account",
+        "project_id": os.environ["FIREBASE_PROJECT_ID"],
+        "client_email": os.environ["FIREBASE_CLIENT_EMAIL"],
+        "private_key": os.environ["FIREBASE_PRIVATE_KEY"].replace("\\n", "\n"),
+    })
 
-        firebase_admin.initialize_app(cred)
-        print("🔥 Firebase initialized")
-    except Exception as e:
-        raise RuntimeError(f"🔥 Firebase init failed: {e}")
+    firebase_admin.initialize_app(cred)
+    print("🔥 Firebase initialized")
+    return True
+
+   
