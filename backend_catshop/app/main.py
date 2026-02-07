@@ -1,32 +1,29 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import asyncpg
-import os
 from contextlib import asynccontextmanager
 
-from app.api.callback_flutter import router as home_router 
-from app.api.search import router as search_router 
+from app.api.callback_flutter import router as callback_router
+from app.api.search_flutter import router as search_router
+from app.api.vision import router as vision_router
+from app.auth.login import router as login_router
+from app.auth.register import router as sign_up_router
+from app.db.database import create_db_pool, close_db_pool
 
-db_pool = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global db_pool
-    DATABASE_URL = os.getenv("DATABASE_URL")
-    db_pool = await asyncpg.create_pool(DATABASE_URL)
-    print("✅ Database connected")
+    await create_db_pool()
+    print("🚀 App startup complete")
     yield
-    await db_pool.close()
-    print("❌ Database disconnected")
+    await close_db_pool()
+    print("🧹 App shutdown complete")
 
 app = FastAPI(
     title="ABC SHOP API",
-    description="API for ABC Shop Management",
     version="1.0.0",
     lifespan=lifespan
 )
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,21 +32,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 👇👇👇 สำคัญมาก
-app.include_router(home_router)
+app.include_router(callback_router)
 app.include_router(search_router)
+app.include_router(login_router)
+app.include_router(sign_up_router)
+app.include_router(vision_router)
 
-# Health
 @app.get("/health")
 async def health_check():
-    async with db_pool.acquire() as conn:
-        await conn.fetchval("SELECT 1")
-    return {"status": "healthy"}
+    return {"status": "ok"}
 
 @app.get("/")
 async def root():
-    return {
-        "message": "Welcome to Cat Shop API",
-        "docs": "/docs",
-        "health": "/health"
-    }
+    return {"message": "Cat Shop API is running"}

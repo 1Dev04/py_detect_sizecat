@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     #Firebase (not JWT)
     FIREBASE_SERVICE_ACCOUNT_KEY: str = "app/serviceAccountKey.json"
 
-    #OpenAI
-    OPENAI_API_KEY: str 
+    # #OpenAI
+    # OPENAI_API_KEY: str 
 
    
     #CORS

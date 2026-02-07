@@ -42,8 +42,7 @@ async def get_home_advertiment():
         
         async with pool.acquire() as connection:
             query = """
-               
-                SELECT 
+    SELECT 
         id,
         image_url,
         images,
@@ -284,6 +283,7 @@ async def get_notifications_messages():
                 WHERE is_active = true
                 AND discount_price IS NOT NULL
                 AND discount_price < price
+                AND discount_price > 0 
                 ORDER BY discount_percent DESC
                 LIMIT 5       
                 """
@@ -333,6 +333,7 @@ async def get_notifications_messages_detail(item_id: int):
                 WHERE id = $1
   				AND is_active = true
  				AND discount_price IS NOT NULL
+                AND discount_price > 0 
   				AND discount_price < price   
                
             """
@@ -425,6 +426,7 @@ async def get_notifications_news_detail(item_id: int):
                     created_at
                 FROM cat_clothing
                 WHERE id = $1
+                 AND discount_price = 0
                   AND is_active = true
             """
 
@@ -590,3 +592,4 @@ async def get_notifications_news_detail(item_id: int):
 #         data=user,
 #         message="User info retrieved"
 #     )
+

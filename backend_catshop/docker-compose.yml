@@ -1,7 +1,6 @@
 version: "3.8"
 
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:16
     container_name: cat_postgres
@@ -11,6 +10,7 @@ services:
       POSTGRES_PASSWORD: catpassword
       POSTGRES_DB: catdb
       PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: Asia/Bangkok  # เพิ่ม timezone
     ports:
       - "5432:5432"
     volumes:
@@ -23,7 +23,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # FastAPI Application
   fastapi:
     build:
       context: .
@@ -33,22 +32,28 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://catuser:catpassword@postgres:5432/catdb
-      ENVIRONMENT: development
-      PYTHONPATH: /app
+      # Database
+      - DATABASE_URL=postgresql://catuser:catpassword@postgres:5432/catdb
+      
+      # Firebase
+      - USE_FIREBASE=true
+      - FIREBASE_SERVICE_ACCOUNT_KEY=/app/serviceAccountKey.json
+      
+      # Timezone
+      - TZ=Asia/Bangkok
+    volumes:
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
+      - ./app:/app/app
+    working_dir: /app
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      - .:/app
-    working_dir: /app
     networks:
       - catshop_network
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   postgres_data:
-    driver: local
 
 networks:
   catshop_network:

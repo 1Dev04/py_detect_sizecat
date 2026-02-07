@@ -7,9 +7,9 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
-# Database connection (ใช้ function ที่มีอยู่แล้ว)
+
 async def get_db_pool():
-    # Your existing database pool logic
+
     pass
 
 # ============================================================================
@@ -87,24 +87,23 @@ async def search_autocomplete(
         pool = await get_db_pool()
         async with pool.acquire() as connection:
             sql = """
-               SELECT 
-    id,
-    name_category,
-    category_type
-FROM search_category
-WHERE 
-    LOWER(name_category) LIKE LOWER($1)
-ORDER BY 
-    CASE 
-        WHEN category_type = 'all' THEN 0
-        WHEN category_type = 'season' THEN 1
-        WHEN category_type = 'festival' THEN 2
-        WHEN category_type = 'style' THEN 3
-        ELSE 4
-    END,
-    name_category
-LIMIT 10;
-
+            SELECT 
+                id,
+                name_category,
+                category_type
+                FROM search_category
+            WHERE 
+            LOWER(name_category) LIKE LOWER($1)
+            ORDER BY 
+            CASE
+                WHEN category_type = 'all' THEN 0
+                WHEN category_type = 'season' THEN 1
+                WHEN category_type = 'festival' THEN 2
+                WHEN category_type = 'style' THEN 3
+            ELSE 4
+            END,
+                name_category
+                LIMIT 10;
             """
             
             search_pattern = f"%{query}%"
@@ -134,9 +133,7 @@ async def search_btn_outfit(
         pool = await get_db_pool()
         
         async with pool.acquire() as connection:
-            # Build query dynamically based on whether gender is provided
-            # IMPORTANT: Check if your table uses 'category' or 'category_id' column
-            # Based on your original code, it seems to use 'category_id'
+    
             where_conditions = ["category_id = $1", "is_active = true"]
             params = [category_id]
             
@@ -189,7 +186,7 @@ async def search_btn_outfit(
             
             if not rows:
                 print("⚠️ Warning: No items found in database!")
-                return []  # Return empty list instead of 404
+                return []
             
             return [dict(row) for row in rows]
             
@@ -218,7 +215,7 @@ async def search_clothing_page(
         pool = await get_db_pool()
         async with pool.acquire() as connection:
             
-            # Build WHERE clause dynamically
+            
             where_conditions = ["c.is_active = true"]
             params = []
             param_count = 1
@@ -235,7 +232,6 @@ async def search_clothing_page(
             
             where_clause = " AND ".join(where_conditions)
             
-            # Count total items
             count_sql = f"""
                 SELECT COUNT(*) 
                 FROM cat_clothing c
@@ -243,39 +239,37 @@ async def search_clothing_page(
             """
             
             total_count = await connection.fetchval(count_sql, *params)
-            
-            # Calculate pagination
+   
             offset = (page - 1) * page_size
             total_pages = (total_count + page_size - 1) // page_size
             
-            # Fetch items with pagination
             items_sql = f"""
-               SELECT 
-    c.id,
-    c.image_url,
-    c.images,
-    c.clothing_name,
-    c.description,
-    c.category_id,
-    sc.name_en as category_name_en,
-    sc.name_th as category_name_th,
-    c.size_category,
-    c.price,
-    c.discount_price,
-    CASE 
-        WHEN c.discount_price IS NOT NULL AND c.discount_price < c.price 
-        THEN ROUND(((c.price - c.discount_price) / c.price) * 100, 0)
-        ELSE NULL
-    END as discount_percent,
-    c.gender,
-    c.stock,
-    c.breed,
-    c.created_at
-FROM cat_clothing c
-LEFT JOIN search_category sc ON c.category_id = sc.id
-WHERE {where_clause}
-ORDER BY c.created_at DESC
-LIMIT ${param_count} OFFSET ${param_count + 1}
+            SELECT 
+                c.id,
+                c.image_url,
+                c.images,
+                c.clothing_name,
+                c.description,
+                c.category_id,
+                sc.name_en as category_name_en,
+                sc.name_th as category_name_th,
+                c.size_category,
+                c.price,
+                c.discount_price,
+                CASE 
+            WHEN c.discount_price IS NOT NULL AND c.discount_price < c.price 
+            THEN ROUND(((c.price - c.discount_price) / c.price) * 100, 0)
+            ELSE NULL
+            END as discount_percent,
+                c.gender,
+                c.stock,
+                c.breed,
+                c.created_at
+            FROM cat_clothing c
+            LEFT JOIN search_category sc ON c.category_id = sc.id
+            WHERE {where_clause}
+            ORDER BY c.created_at DESC
+            LIMIT ${param_count} OFFSET ${param_count + 1}
             """
             
             params.extend([page_size, offset])

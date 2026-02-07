@@ -2,57 +2,49 @@ import asyncpg
 import os
 from typing import Optional
 
-# Database connection pool (singleton)
 _pool: Optional[asyncpg.Pool] = None
 
 
+def get_database_url() -> str:
+    return os.getenv(
+        "DATABASE_URL",
+        "postgresql://catuser:catpassword@localhost:5432/catdb"
+    )
+
+
 async def create_db_pool() -> asyncpg.Pool:
-    """
-    Create database connection pool
-    """
     global _pool
-    
-    if _pool is None:
-        database_url = os.getenv(
-            "DATABASE_URL",
-            "postgresql://catuser:catpassword@postgres:5432/catdb"
+
+    if _pool is not None:
+        return _pool
+
+    database_url = get_database_url()
+
+    try:
+        _pool = await asyncpg.create_pool(
+            database_url,
+            min_size=5,
+            max_size=20,
+            command_timeout=60
         )
-        
-        try:
-            _pool = await asyncpg.create_pool(
-                database_url,
-                min_size=5,
-                max_size=20,
-                max_queries=50000,
-                max_inactive_connection_lifetime=300,
-                command_timeout=60
-            )
-            
-            print("✅ Database pool created successfully")
-        except Exception as e:
-            print(f"❌ Failed to create database pool: {e}")
-            raise
-    
+        print("✅ Database pool created")
+    except Exception as e:
+        print("❌ Database connection failed")
+        print(f"➡️ DATABASE_URL = {database_url}")
+        raise e
+
+    return _pool
+
+
+async def get_db_pool() -> asyncpg.Pool:
+    if _pool is None:
+        await create_db_pool()
     return _pool
 
 
 async def close_db_pool():
-    """
-    Close database connection pool
-    """
     global _pool
-    
     if _pool is not None:
         await _pool.close()
         _pool = None
-        print("✅ Database pool closed")
-
-
-async def get_db_pool() -> asyncpg.Pool:
-    """
-    Dependency for getting database pool
-    """
-    global _pool
-    if _pool is None:
-        _pool = await create_db_pool()
-    return _pool
+        print("🧹 Database pool closed")
