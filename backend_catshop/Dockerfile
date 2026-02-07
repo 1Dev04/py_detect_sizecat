@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y \
 
 COPY requirements.txt .
 
-# 🔥 ตรึง Torch CPU
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir \
       torch==2.2.2+cpu \
@@ -21,5 +20,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+EXPOSE 10000
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
