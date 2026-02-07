@@ -8,10 +8,11 @@ from app.api.vision import router as vision_router
 from app.auth.login import router as login_router
 from app.auth.register import router as sign_up_router
 from app.db.database import create_db_pool, close_db_pool
-
+from app.core.firebase import init_firebase
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_firebase()
     await create_db_pool()
     print("🚀 App startup complete")
     yield
