@@ -54,11 +54,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(callback_router)
-app.include_router(search_router)
-app.include_router(login_router)
-app.include_router(sign_up_router)
-app.include_router(vision_router)
+app.include_router(callback_router, prefix="/api")
+app.include_router(search_router, prefix="/api")
+app.include_router(login_router, prefix="/api")
+app.include_router(sign_up_router, prefix="/api")
+app.include_router(vision_router, prefix="/api")
+
 
 
 @app.get("/health")

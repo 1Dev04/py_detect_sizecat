@@ -33,7 +33,8 @@ services:
       - "8000:8000"
     environment:
       # Database
-      - DATABASE_URL=postgresql://catuser:catpassword@postgres:5432/catdb
+      - DATABASE_URL=postgresql://catuser:Qc6CgariRTv2thkYymNzhLrmKRGE3CPN@dpg-d645vn7pm1nc738ihcng-a.singapore-postgres.render.com:5432/catdb_xt7q
+
     volumes:
       - ./app:/app/app
     working_dir: /app

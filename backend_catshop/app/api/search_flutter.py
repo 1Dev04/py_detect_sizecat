@@ -4,13 +4,13 @@ from fastapi import APIRouter, HTTPException, Query
 import asyncpg
 from typing import Optional, List
 from pydantic import BaseModel
+from app.db.database import get_db_pool
+
+from fastapi import APIRouter
 
 router = APIRouter()
 
 
-async def get_db_pool():
-
-    pass
 
 # ============================================================================
 # Models
@@ -52,27 +52,6 @@ class PaginatedResponse(BaseModel):
 # API Endpoints
 # ============================================================================
 
-router = APIRouter(
-    prefix="/api",
-    tags=["Flutter Callbacks"]
-)
-
-async def get_db_pool():
-    """Get database pool - minimal version"""
-    try:
-        from app.db.database import get_db_pool as get_pool
-        return await get_pool()
-    except:
-        import asyncpg
-        import os
-        
-        database_url = os.getenv(
-            "DATABASE_URL",
-            "postgresql://catuser:catpassword@postgres:5432/catdb"
-        )
-        
-        pool = await asyncpg.create_pool(database_url)
-        return pool
 
 
 @router.get("/search/autocomplete")

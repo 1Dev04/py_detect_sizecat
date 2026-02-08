@@ -5,8 +5,9 @@ import requests
 from fastapi import APIRouter, HTTPException
 from app.services.detect_cat import detect_cat
 from app.services.analysis_cat import analyze_cat
-router = APIRouter(prefix="/api/vision", tags=["Vision"])
+from fastapi import APIRouter
 
+router = APIRouter()
 
 @router.post("/analyze-cat")
 def analyze_cat_url(payload: dict):

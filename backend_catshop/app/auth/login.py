@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.db.database import get_db_pool
 from app.auth.dependencies import verify_firebase_token
+from fastapi import APIRouter
 
-router = APIRouter(prefix="/api/auth", tags=["Auth"])
-
+router = APIRouter()
 
 @router.post("/login")
 async def login(

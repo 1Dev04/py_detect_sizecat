@@ -8,7 +8,7 @@ _pool = None
 def get_database_url() -> str:
     return os.getenv(
         "DATABASE_URL",
-        "postgresql://catuser:catpassword@localhost:5432/catdb"
+        "postgresql://catuser:Qc6CgariRTv2thkYymNzhLrmKRGE3CPN@dpg-d645vn7pm1nc738ihcng-a.singapore-postgres.render.com:5432/catdb_xt7q"
     )
 
 
