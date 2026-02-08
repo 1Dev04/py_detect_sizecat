@@ -27,14 +27,21 @@ def init_firebase() -> bool:
         "FIREBASE_CLIENT_EMAIL",
         "FIREBASE_PRIVATE_KEY",
     ]
+    private_key = os.environ["FIREBASE_PRIVATE_KEY"]
+
+    private_key = (
+    private_key
+    .replace("\\n", "\n")
+    .strip('"')
+)
 
     if all(os.getenv(k) for k in env_keys):
         try:
             cred = credentials.Certificate({
-                "type": "service_account",
-                "project_id": os.environ["FIREBASE_PROJECT_ID"],
-                "client_email": os.environ["FIREBASE_CLIENT_EMAIL"],
-                "private_key": os.environ["FIREBASE_PRIVATE_KEY"].replace("\\n", "\n"),
+            "type": "service_account",
+            "project_id": os.environ["FIREBASE_PROJECT_ID"],
+            "client_email": os.environ["FIREBASE_CLIENT_EMAIL"],
+            "private_key": private_key,
             })
             firebase_admin.initialize_app(cred)
             print("🔥 Firebase initialized via ENV")

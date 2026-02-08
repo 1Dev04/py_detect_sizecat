@@ -10,14 +10,35 @@ from app.auth.register import router as sign_up_router
 from app.db.database import create_db_pool, close_db_pool
 from app.core.firebase import init_firebase
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await create_db_pool()
-    init_firebase()
+
+    # --- DB ---
+    try:
+        await create_db_pool()
+    except Exception as e:
+        print(f"⚠️ Database not ready, continue without DB: {e}")
+
+    # --- Firebase ---
+    try:
+        init_firebase()
+        print("✅ Firebase initialized")
+    except Exception as e:
+        print(f"⚠️ Firebase skipped: {e}")
+
     print("🚀 App startup complete")
     yield
-    await close_db_pool()
+
+    # --- Shutdown ---
+    try:
+        await close_db_pool()
+        print("🧹 Database pool closed")
+    except Exception:
+        pass
+
     print("🧹 App shutdown complete")
+
 
 app = FastAPI(
     title="ABC SHOP API",
@@ -39,9 +60,11 @@ app.include_router(login_router)
 app.include_router(sign_up_router)
 app.include_router(vision_router)
 
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
 
 @app.get("/")
 async def root():
