@@ -15,7 +15,6 @@ def analyze_cat_url(payload: dict):
     if not image_url:
         raise HTTPException(status_code=400, detail="image_url is required")
 
-
     image_path = "/tmp/cat.jpg"
     r = requests.get(image_url, timeout=10)
     if r.status_code != 200:
