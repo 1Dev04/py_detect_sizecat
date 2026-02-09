@@ -22,6 +22,7 @@ async def create_db_pool():
                 DATABASE_URL,
                 min_size=1,
                 max_size=5,
+                server_settings={'client_encoding': 'UTF8'}
             )
             print("✅ Database connected")
             return
