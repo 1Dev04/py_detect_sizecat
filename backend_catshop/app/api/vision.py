@@ -9,7 +9,7 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-@router.post("/analyze-cat")
+@router.post("/vision/analyze-cat")
 def analyze_cat_url(payload: dict):
     image_url = payload.get("image_url")
     if not image_url:
