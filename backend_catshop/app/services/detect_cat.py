@@ -1,22 +1,21 @@
-"""Cat Detect Service - Fixed for PyTorch 2.6+ and Ultralytics 8.1.0"""
+"""Cat Detect Service - Fixed for PyTorch 2.6+"""
 
 import cv2
 import numpy as np
-import torch
-import os
-from ultralytics import YOLO
 from typing import Dict
 
-# 🔥 FIX PyTorch 2.6+ weights_only issue
-os.environ['TORCH_FORCE_WEIGHTS_ONLY_LOAD'] = '0'
+# 🔥 CRITICAL: Import torch first, then add safe globals BEFORE importing YOLO
+import torch
+torch.serialization.add_safe_globals(['ultralytics.nn.tasks.DetectionModel'])
+
+from ultralytics import YOLO
 
 
 class CatDetector:
     def __init__(self, model_path: str = "yolov8n.pt"):
         print(f"🔥 Loading YOLO model: {model_path}")
         try:
-            # ❌ ลบ verbose=False ออก
-            self.model = YOLO(model_path)  # 🔥 แก้ตรงนี้
+            self.model = YOLO(model_path)
             print("✅ YOLO model loaded successfully")
         except Exception as e:
             print(f"❌ Failed to load YOLO: {e}")
@@ -55,7 +54,6 @@ class CatDetector:
                 return {"is_cat": False, "confidence": 0.0, "bounding_box": None, "error": quality["reason"]}
 
             print("🤖 Running YOLO detection...")
-            # ✅ verbose=False อยู่ใน predict() ได้
             results = self.model(image, conf=confidence_threshold, verbose=False)
 
             cats = []
