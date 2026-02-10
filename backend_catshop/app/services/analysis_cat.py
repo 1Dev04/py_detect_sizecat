@@ -396,9 +396,11 @@ def analyze_cat(
         "confidence": metrics["confidence"],
         "quality_flag": metrics["quality_flag"],
         
+        # 🔥 เพิ่ม bounding_box ที่ได้จาก detect_cat
+        "bounding_box": bounding_box,
+        
         # Metadata
         "analysis_method": "cv_heuristic_v5_professional",
         "analysis_version": "5.0",
         "image_path": image_path
     }
-
