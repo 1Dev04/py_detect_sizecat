@@ -1,4 +1,4 @@
-"""Cat Detect Service with YOLOv8 Nano - Fixed for PyTorch 2.6+"""
+"""Cat Detect Service - Fixed for PyTorch 2.6+ and Ultralytics 8.1.0"""
 
 import cv2
 import numpy as np
@@ -7,16 +7,22 @@ import os
 from ultralytics import YOLO
 from typing import Dict
 
-# 🔥 FIX: PyTorch 2.6+ weights_only issue
+# 🔥 FIX PyTorch 2.6+ weights_only issue
 os.environ['TORCH_FORCE_WEIGHTS_ONLY_LOAD'] = '0'
 
 
 class CatDetector:
     def __init__(self, model_path: str = "yolov8n.pt"):
         print(f"🔥 Loading YOLO model: {model_path}")
-        self.model = YOLO(model_path, verbose=False)
+        try:
+            # ❌ ลบ verbose=False ออก
+            self.model = YOLO(model_path)  # 🔥 แก้ตรงนี้
+            print("✅ YOLO model loaded successfully")
+        except Exception as e:
+            print(f"❌ Failed to load YOLO: {e}")
+            raise
+        
         self.cat_class_id = 15
-        print("✅ YOLO model loaded successfully")
 
     def check_image_quality(self, image: np.ndarray) -> Dict:
         h, w = image.shape[:2]
@@ -38,14 +44,18 @@ class CatDetector:
 
     def detect_cat(self, image_path: str, confidence_threshold: float = 0.5) -> Dict:
         try:
+            print(f"📸 Reading image: {image_path}")
             image = cv2.imread(image_path)
             if image is None:
                 return {"is_cat": False, "confidence": 0.0, "bounding_box": None, "error": "โหลดภาพไม่ได้"}
 
+            print("🔍 Checking image quality...")
             quality = self.check_image_quality(image)
             if not quality["is_valid"]:
                 return {"is_cat": False, "confidence": 0.0, "bounding_box": None, "error": quality["reason"]}
 
+            print("🤖 Running YOLO detection...")
+            # ✅ verbose=False อยู่ใน predict() ได้
             results = self.model(image, conf=confidence_threshold, verbose=False)
 
             cats = []
@@ -58,10 +68,14 @@ class CatDetector:
                             "bbox": [int(x1), int(y1), int(x2), int(y2)]
                         })
 
+            print(f"🐱 Found {len(cats)} cat(s)")
+            
             if not cats:
                 return {"is_cat": False, "confidence": 0.0, "bounding_box": None, "error": "ไม่พบแมว"}
 
             best = max(cats, key=lambda x: x["confidence"])
+            print(f"✅ Best cat confidence: {best['confidence']:.2f}")
+            
             return {
                 "is_cat": True,
                 "confidence": round(best["confidence"], 2),
@@ -71,7 +85,9 @@ class CatDetector:
             }
 
         except Exception as e:
+            import traceback
             print(f"❌ detect_cat error: {e}")
+            print(traceback.format_exc())
             return {"is_cat": False, "confidence": 0.0, "bounding_box": None, "error": str(e)}
 
 
@@ -80,6 +96,7 @@ _detector_instance = None
 def get_detector() -> CatDetector:
     global _detector_instance
     if _detector_instance is None:
+        print("🏗️ Creating CatDetector instance...")
         _detector_instance = CatDetector()
     return _detector_instance
 
