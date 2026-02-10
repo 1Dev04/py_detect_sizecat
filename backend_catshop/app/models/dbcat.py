@@ -1,78 +1,55 @@
-from sqlalchemy import Column, Integer, String, Numeric, Text, TIMESTAMP, JSON, CheckConstraint, Index
+from sqlalchemy import Column, Integer, String, Numeric, Text, DateTime, JSON
 from sqlalchemy.sql import func
-from catshop_system.backend_catshop.app.db.database import Base
+from app.db.database import Base
 
 class Cat(Base):
-    """
-    Model สำหรับเก็บข้อมูลแมวที่ detect จาก AI
-    """
-    __tablename__ = "cats"
+    __tablename__ = "cat"
     
     # Primary Key
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     
-    # Cat Info
-    cat_color = Column(String(100), nullable=True, comment="สีแมว")
-    breed = Column(String(100), nullable=True, comment="สายพันธุ์")
-    age = Column(Integer, CheckConstraint('age >= 0'), nullable=True, comment="อายุ")
+    # ข้อมูลพื้นฐาน
+    cat_color = Column(String(100), nullable=True, comment='สีของแมว (เช่น orange+white)')
+    breed = Column(String(100), nullable=True, comment='สายพันธุ์')
+    age = Column(Integer, nullable=True, comment='อายุ (เดือน)')
+    age_category = Column(String(20), default='adult', comment='ช่วงอายุ: kitten/young/adult/senior')
+    gender = Column(Integer, default=0, comment='0=ไม่ระบุ, 1=ผู้, 2=เมีย')
     
-    # Weight & Size
-    weight = Column(
-        Numeric(5, 2), 
-        CheckConstraint('weight > 0'), 
-        nullable=False,
-        comment="น้ำหนัก (kg)"
-    )
-    size_category = Column(
-        String(5),
-        CheckConstraint("size_category IN ('XS','S','M','L','XL')"),
-        nullable=False,
-        comment="ขนาด"
-    )
+    # น้ำหนักและสภาพร่างกาย
+    weight = Column(Numeric(5, 2), nullable=True, comment='น้ำหนัก (kg)')
+    body_condition_score = Column(Integer, nullable=True, comment='BCS 1-9 คะแนน')
+    body_condition = Column(String(30), nullable=True, comment='underweight/lean/ideal/overweight/obese')
+    body_condition_description = Column(Text, nullable=True, comment='คำแนะนำเกี่ยวกับสภาพร่างกาย')
+    bmi = Column(Numeric(5, 2), nullable=True, comment='ดัชนีมวลกายแมว')
     
-    # Measurements
-    chest_cm = Column(Numeric(6, 2), nullable=True, comment="รอบอก (cm)")
-    neck_cm = Column(Numeric(6, 2), nullable=True, comment="รอบคอ (cm)")
-    body_length_cm = Column(Numeric(6, 2), nullable=True, comment="ความยาวตัว (cm)")
+    # ขนาดส่วนต่างๆ
+    chest_cm = Column(Numeric(6, 2), nullable=True, comment='รอบอก (cm)')
+    neck_cm = Column(Numeric(6, 2), nullable=True, comment='รอบคอ (cm)')
+    waist_cm = Column(Numeric(6, 2), nullable=True, comment='รอบเอว (cm)')
+    body_length_cm = Column(Numeric(6, 2), nullable=True, comment='ความยาวลำตัว (cm)')
+    back_length_cm = Column(Numeric(6, 2), nullable=True, comment='ความยาวหลัง (cm)')
+    leg_length_cm = Column(Numeric(6, 2), nullable=True, comment='ความยาวขา (cm)')
     
-    # AI Detection Info
-    confidence = Column(
-        Numeric(5, 4),
-        CheckConstraint('confidence BETWEEN 0 AND 1'),
-        nullable=True,
-        comment="ความมั่นใจจาก AI (0-1)"
-    )
-    bounding_box = Column(JSON, nullable=True, comment="พิกัด bounding box [x1, y1, x2, y2]")
+    # ขนาดเสื้อผ้า
+    size_category = Column(String(5), nullable=True, comment='XS/S/M/L/XL')
+    size_recommendation = Column(Text, nullable=True, comment='คำแนะนำขนาด')
+    size_ranges = Column(JSON, nullable=True, comment='ช่วงขนาด JSON')
     
-    # Images
-    image_url = Column(Text, nullable=False, comment="Cloudinary URL")
-    thumbnail_url = Column(Text, nullable=True, comment="รูป thumbnail")
+    # ข้อมูลการวิเคราะห์
+    posture = Column(String(20), nullable=True, comment='ท่าทาง: lying/sitting/standing/curled')
+    confidence = Column(Numeric(5, 4), nullable=True, comment='ความมั่นใจ 0-1')
+    quality_flag = Column(String(20), nullable=True, comment='คุณภาพภาพ: excellent/good/medium/poor')
+    bounding_box = Column(JSON, nullable=True, comment='พิกัดแมวในภาพ [x1, y1, x2, y2]')
     
-    # Timestamps
-    detected_at = Column(
-        TIMESTAMP(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-        comment="วันที่ detect"
-    )
-    created_at = Column(
-        TIMESTAMP(timezone=True),
-        server_default=func.now(),
-        nullable=False
-    )
-    updated_at = Column(
-        TIMESTAMP(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=True
-    )
+    # ข้อมูลรูปภาพ
+    image_url = Column(Text, nullable=True, comment='URL รูปภาพต้นฉบับ')
+    thumbnail_url = Column(Text, nullable=True, comment='URL รูปภาพขนาดย่อ')
     
-    # Indexes
-    __table_args__ = (
-        Index('idx_cats_size_category', 'size_category'),
-        Index('idx_cats_detected_at', 'detected_at'),
-        Index('idx_cats_cat_color', 'cat_color'),
-    )
+    # ข้อมูลเจ้าของ
+    firebase_uid = Column(String(128), nullable=True, index=True, comment='Firebase UID ของเจ้าของ')
     
-    def __repr__(self):
-        return f"<Cat(id={self.id}, color={self.cat_color}, breed={self.breed}, size={self.size_category})>"
+    # Metadata
+    analysis_version = Column(String(10), default='5.0', comment='เวอร์ชัน algorithm')
+    analysis_method = Column(String(50), default='cv_heuristic_v5_professional', comment='วิธีการวิเคราะห์')
+    detected_at = Column(DateTime(timezone=True), server_default=func.now(), comment='วันที่ตรวจจับ')
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), comment='วันที่อัปเดต')

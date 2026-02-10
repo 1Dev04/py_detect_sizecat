@@ -7,9 +7,16 @@ from typing import Optional, List
 
 from app.db.database import get_db
 from app.models.dbcat import Cat
-from app.schemas.cat import CatCreate, CatUpdate, CatResponse
 from app.auth.dependencies import verify_firebase_token
 from app.utils.response import success_response, error_response
+from app.services.analysis_cat import analyze_cat
+
+from app.schemas.cat import (
+    CatCreate, 
+    CatUpdate, 
+    CatResponse, 
+    AnalysisResultSchema
+)
 
 router = APIRouter(
     prefix="/api",
@@ -391,3 +398,127 @@ def get_all_cats_admin(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve cats: {str(e)}"
         )
+
+
+# ============================================
+# 🔥 NEW ENDPOINT - บันทึกผลการวิเคราะห์ 
+# ============================================
+
+@router.post("/system/analysis/analyze-and-save", response_model=dict, status_code=status.HTTP_201_CREATED)
+def analyze_and_save_cat(
+    image_path: str,
+    bounding_box: List[float],
+    cat_color: Optional[str] = None,
+    breed: str = "unknown",
+    age_category: str = "adult",
+    image_url: Optional[str] = None,
+    thumbnail_url: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: dict = Depends(verify_firebase_token)
+):
+    """
+    🔥 **วิเคราะห์แมวและบันทึกเข้า DB ทันที** (1 Step)
+    
+    **ขั้นตอน:**
+    1. รับรูปภาพ + bounding_box
+    2. วิเคราะห์แมว (CatAnalyzer V5)
+    3. บันทึกเข้า Database ทันที
+    4. ส่งผลกลับพร้อม cat_id
+    
+    **Authentication:** Firebase ID Token required
+    
+    **Query Parameters:**
+    - image_path: path ของรูปภาพ (required)
+    - bounding_box: [x1, y1, x2, y2] จาก YOLO (required)
+    - cat_color: สีของแมว เช่น orange_white (optional)
+    - breed: สายพันธุ์ (optional, default: unknown)
+    - age_category: kitten/young/adult/senior (optional, default: adult)
+    - image_url: URL รูปภาพหลังอัปโหลด (optional)
+    - thumbnail_url: URL thumbnail (optional)
+    
+    **Example:**
+```
+    POST /api/system/analysis/analyze-and-save?image_path=uploads/cat.jpg&bounding_box=[100,150,400,450]&cat_color=orange_white
+```
+    """
+    try:
+        # 🔐 ดึง firebase_uid จาก token
+        firebase_uid = user.get("uid")
+        
+        if not firebase_uid:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid Firebase token"
+            )
+        
+        # 🐱 Step 1: วิเคราะห์แมว
+        analysis_result = analyze_cat(
+            image_path=image_path,
+            bounding_box=bounding_box,
+            firebase_uid=firebase_uid,
+            cat_color=cat_color,
+            breed=breed,
+            age_category=age_category
+        )
+        
+        # 📦 Step 2: แยก measurements ออกมา
+        measurements = analysis_result['measurements']
+        
+        # 💾 Step 3: บันทึกเข้า Database
+        new_cat = Cat(
+            firebase_uid=firebase_uid,
+            cat_color=analysis_result['cat_color'],
+            breed=analysis_result['breed'],
+            age_category=analysis_result['age_category'],
+            weight=analysis_result['weight_kg'],
+            body_condition_score=analysis_result['body_condition_score'],
+            body_condition=analysis_result['body_condition'],
+            body_condition_description=analysis_result['body_condition_description'],
+            bmi=analysis_result['bmi'],
+            chest_cm=measurements['chest_cm'],
+            neck_cm=measurements['neck_cm'],
+            waist_cm=measurements['waist_cm'],
+            body_length_cm=measurements['body_length_cm'],
+            back_length_cm=measurements['back_length_cm'],
+            leg_length_cm=measurements['leg_length_cm'],
+            size_category=analysis_result['size_category'],
+            size_recommendation=analysis_result['size_recommendation'],
+            size_ranges=analysis_result['size_ranges'],
+            posture=analysis_result['posture'],
+            confidence=analysis_result['confidence'],
+            quality_flag=analysis_result['quality_flag'],
+            bounding_box=bounding_box,
+            image_url=image_url or image_path,
+            thumbnail_url=thumbnail_url,
+            analysis_version=analysis_result['analysis_version'],
+            analysis_method=analysis_result['analysis_method'],
+            detected_at=datetime.utcnow()
+        )
+        
+        db.add(new_cat)
+        db.commit()
+        db.refresh(new_cat)
+        
+        # 📤 Step 4: ส่งผลกลับ
+        response_data = CatResponse.from_orm(new_cat).model_dump()
+        response_data['analysis_summary'] = {
+            "weight_kg": analysis_result['weight_kg'],
+            "size_category": analysis_result['size_category'],
+            "body_condition": analysis_result['body_condition'],
+            "confidence": analysis_result['confidence']
+        }
+        
+        return success_response(
+            data=response_data,
+            message=f"✅ แมวของคุณวิเคราะห์เสร็จแล้ว! น้ำหนัก {analysis_result['weight_kg']} kg, ขนาด {analysis_result['size_category']}"
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to analyze and save cat: {str(e)}"
+        )
+ 

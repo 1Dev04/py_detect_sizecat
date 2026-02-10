@@ -1,167 +1,149 @@
-from pydantic import BaseModel, Field, validator
-from typing import Optional
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional, Dict, List
 from datetime import datetime
 
 # ============================================
-# Schema สำหรับสร้างแมว (Create)
+# CREATE SCHEMA
 # ============================================
 class CatCreate(BaseModel):
-    """Schema for creating a new cat"""
+    """Schema สำหรับสร้างข้อมูลแมวใหม่"""
     
-    name: str = Field(..., description="Cat name or color (e.g., Orange_Cat)")
-    breed: Optional[str] = Field(None, description="Cat breed (e.g., Persian)")
-    age: Optional[int] = Field(None, ge=0, le=30, description="Cat age in years")
-    weight: float = Field(..., gt=0, description="Cat weight in kg")
+    # ข้อมูลพื้นฐาน
+    cat_color: Optional[str] = Field(None, description="สีของแมว เช่น orange, black+white")
+    breed: Optional[str] = Field(None, description="สายพันธุ์")
+    age: Optional[int] = Field(None, description="อายุ (เดือน)")
+    age_category: Optional[str] = Field("adult", description="kitten/young/adult/senior")
+    gender: Optional[int] = Field(0, description="0=ไม่ระบุ, 1=ผู้, 2=เมีย")
     
-    size_category: str = Field(..., description="Size category: XS, S, M, L, XL")
-    chest_cm: float = Field(..., gt=0, description="Chest circumference in cm")
-    neck_cm: Optional[float] = Field(None, gt=0, description="Neck circumference in cm")
-    body_length_cm: Optional[float] = Field(None, gt=0, description="Body length in cm")
+    # น้ำหนักและสภาพร่างกาย
+    weight: Optional[float] = Field(None, description="น้ำหนัก (kg)")
+    body_condition_score: Optional[int] = Field(None, ge=1, le=9, description="BCS 1-9")
+    body_condition: Optional[str] = Field(None, description="underweight/lean/ideal/overweight/obese")
+    body_condition_description: Optional[str] = Field(None, description="คำอธิบายสภาพร่างกาย")
+    bmi: Optional[float] = Field(None, description="ดัชนีมวลกาย")
     
-    confidence: float = Field(..., ge=0, le=1, description="AI prediction confidence (0-1)")
-    image_url: str = Field(..., description="Full image URL from Cloudinary")
-    thumbnail_url: Optional[str] = Field(None, description="Thumbnail URL")
+    # ขนาดส่วนต่างๆ
+    chest_cm: Optional[float] = Field(None, description="รอบอก (cm)")
+    neck_cm: Optional[float] = Field(None, description="รอบคอ (cm)")
+    waist_cm: Optional[float] = Field(None, description="รอบเอว (cm)")
+    body_length_cm: Optional[float] = Field(None, description="ความยาวลำตัว (cm)")
+    back_length_cm: Optional[float] = Field(None, description="ความยาวหลัง (cm)")
+    leg_length_cm: Optional[float] = Field(None, description="ความยาวขา (cm)")
     
-    @validator('size_category')
-    def validate_size(cls, v):
-        allowed = ['XS', 'S', 'M', 'L', 'XL']
-        if v not in allowed:
-            raise ValueError(f'Size must be one of {allowed}')
-        return v
+    # ขนาดเสื้อผ้า
+    size_category: Optional[str] = Field(None, description="XS/S/M/L/XL")
+    size_recommendation: Optional[str] = Field(None, description="คำแนะนำขนาด")
+    size_ranges: Optional[Dict] = Field(None, description="ช่วงขนาด")
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "name": "Orange_Cat",
-                "breed": "Persian",
-                "age": 2,
-                "weight": 3.5,
-                "size_category": "M",
-                "chest_cm": 44.6,
-                "neck_cm": 25.3,
-                "body_length_cm": 38.2,
-                "confidence": 0.95,
-                "image_url": "https://res.cloudinary.com/xxx/cat.jpg",
-                "thumbnail_url": "https://res.cloudinary.com/xxx/cat_thumb.jpg"
-            }
-        }
+    # ข้อมูลการวิเคราะห์
+    posture: Optional[str] = Field(None, description="ท่าทาง")
+    confidence: Optional[float] = Field(None, ge=0, le=1, description="ความมั่นใจ")
+    quality_flag: Optional[str] = Field(None, description="คุณภาพภาพ")
+    bounding_box: Optional[List[float]] = Field(None, description="พิกัดแมวในภาพ")
+    
+    # ข้อมูลรูปภาพ
+    image_url: Optional[str] = Field(None, description="URL รูปภาพ")
+    thumbnail_url: Optional[str] = Field(None, description="URL thumbnail")
+    
+    # Metadata
+    analysis_version: Optional[str] = Field("5.0", description="เวอร์ชัน algorithm")
+    analysis_method: Optional[str] = Field("cv_heuristic_v5_professional", description="วิธีการวิเคราะห์")
 
 # ============================================
-# Schema สำหรับอัปเดตแมว (Update)
+# UPDATE SCHEMA
 # ============================================
 class CatUpdate(BaseModel):
-    """Schema for updating cat data (all fields optional)"""
+    """Schema สำหรับอัปเดตข้อมูลแมว (ทุกฟิลด์ optional)"""
     
-    name: Optional[str] = None
+    cat_color: Optional[str] = None
     breed: Optional[str] = None
-    age: Optional[int] = Field(None, ge=0, le=30)
-    weight: Optional[float] = Field(None, gt=0)
-    
+    age: Optional[int] = None
+    age_category: Optional[str] = None
+    gender: Optional[int] = None
+    weight: Optional[float] = None
+    body_condition_score: Optional[int] = Field(None, ge=1, le=9)
+    body_condition: Optional[str] = None
+    body_condition_description: Optional[str] = None
+    bmi: Optional[float] = None
+    chest_cm: Optional[float] = None
+    neck_cm: Optional[float] = None
+    waist_cm: Optional[float] = None
+    body_length_cm: Optional[float] = None
+    back_length_cm: Optional[float] = None
+    leg_length_cm: Optional[float] = None
     size_category: Optional[str] = None
-    chest_cm: Optional[float] = Field(None, gt=0)
-    neck_cm: Optional[float] = Field(None, gt=0)
-    body_length_cm: Optional[float] = Field(None, gt=0)
-    
+    size_recommendation: Optional[str] = None
+    size_ranges: Optional[Dict] = None
+    posture: Optional[str] = None
     confidence: Optional[float] = Field(None, ge=0, le=1)
+    quality_flag: Optional[str] = None
+    bounding_box: Optional[List[float]] = None
     image_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
-    
-    @validator('size_category')
-    def validate_size(cls, v):
-        if v is not None:
-            allowed = ['XS', 'S', 'M', 'L', 'XL']
-            if v not in allowed:
-                raise ValueError(f'Size must be one of {allowed}')
-        return v
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "name": "Fluffy",
-                "age": 3,
-                "weight": 4.2
-            }
-        }
 
 # ============================================
-# Schema สำหรับแสดงผลแมว (Response)
+# RESPONSE SCHEMA
 # ============================================
 class CatResponse(BaseModel):
-    """Schema for cat response"""
+    """Schema สำหรับ Response"""
+    
+    model_config = ConfigDict(from_attributes=True)
     
     id: int
-    firebase_uid: str
-    
-    name: str
+    firebase_uid: Optional[str]
+    cat_color: Optional[str]
     breed: Optional[str]
     age: Optional[int]
-    weight: float
-    
-    size_category: str
-    chest_cm: float
+    age_category: Optional[str]
+    gender: Optional[int]
+    weight: Optional[float]
+    body_condition_score: Optional[int]
+    body_condition: Optional[str]
+    body_condition_description: Optional[str]
+    bmi: Optional[float]
+    chest_cm: Optional[float]
     neck_cm: Optional[float]
+    waist_cm: Optional[float]
     body_length_cm: Optional[float]
-    
-    confidence: float
-    image_url: str
+    back_length_cm: Optional[float]
+    leg_length_cm: Optional[float]
+    size_category: Optional[str]
+    size_recommendation: Optional[str]
+    size_ranges: Optional[Dict]
+    posture: Optional[str]
+    confidence: Optional[float]
+    quality_flag: Optional[str]
+    bounding_box: Optional[List]
+    image_url: Optional[str]
     thumbnail_url: Optional[str]
-    
-    detected_at: datetime
+    analysis_version: Optional[str]
+    analysis_method: Optional[str]
+    detected_at: Optional[datetime]
     updated_at: Optional[datetime]
-    
-    class Config:
-        from_attributes = True  # Pydantic v2
-        # orm_mode = True  # Pydantic v1
-        json_schema_extra = {
-            "example": {
-                "id": 1,
-                "firebase_uid": "firebase_user_abc123",
-                "name": "Orange_Cat",
-                "breed": "Persian",
-                "age": 2,
-                "weight": 3.5,
-                "size_category": "M",
-                "chest_cm": 44.6,
-                "neck_cm": 25.3,
-                "body_length_cm": 38.2,
-                "confidence": 0.95,
-                "image_url": "https://res.cloudinary.com/xxx/cat.jpg",
-                "thumbnail_url": "https://res.cloudinary.com/xxx/cat_thumb.jpg",
-                "detected_at": "2025-02-04T10:30:00Z",
-                "updated_at": "2025-02-04T10:30:00Z"
-            }
-        }
 
 # ============================================
-# Schema สำหรับ List Response
+# ANALYSIS RESULT SCHEMA (สำหรับ endpoint /analysis/save)
 # ============================================
-class CatListResponse(BaseModel):
-    """Schema for list of cats with pagination"""
+class AnalysisResultSchema(BaseModel):
+    """Schema สำหรับผลการวิเคราะห์จาก CatAnalyzer"""
     
-    cats: list[CatResponse]
-    total: int
-    skip: int
-    limit: int
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "cats": [
-                    {
-                        "id": 1,
-                        "firebase_uid": "user_abc",
-                        "name": "Orange_Cat",
-                        "breed": "Persian",
-                        "weight": 3.5,
-                        "size_category": "M",
-                        "chest_cm": 44.6,
-                        "confidence": 0.95,
-                        "image_url": "https://...",
-                        "detected_at": "2025-02-04T10:30:00Z"
-                    }
-                ],
-                "total": 10,
-                "skip": 0,
-                "limit": 100
-            }
-        }
+    firebase_uid: str
+    cat_color: str
+    breed: str
+    age_category: str
+    weight_kg: float
+    body_condition_score: int
+    body_condition: str
+    body_condition_description: str
+    bmi: float
+    measurements: Dict[str, float]  # chest_cm, neck_cm, waist_cm, etc.
+    size_category: str
+    size_ranges: Dict
+    size_recommendation: str
+    posture: str
+    confidence: float
+    quality_flag: str
+    bounding_box: Optional[List[float]] = None
+    image_path: str
+    analysis_version: str
+    analysis_method: str
