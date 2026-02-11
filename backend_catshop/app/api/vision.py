@@ -59,7 +59,6 @@ class AnalyzeCatRequest(BaseModel):
             }
         }
 
-
 # ============================================
 # ANALYZE CAT ENDPOINT
 # ============================================
