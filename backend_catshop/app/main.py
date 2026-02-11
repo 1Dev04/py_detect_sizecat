@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="ABC SHOP API",
-    version="1.0.0",
+    version="1.5.0",
     lifespan=lifespan
 )
 
@@ -63,35 +63,10 @@ app.include_router(vision_router, prefix="/api")
 
 
 @app.get("/health")
-def health_check():
-    """Health check endpoint for monitoring"""
-    return {
-        "status": "healthy",
-        "service": "catshop-backend"
-    }
+async def health_check():
+    return {"status": "ok"}
 
 
-
-# CORS - อนุญาตทุก origin (production ควรระบุ domain เฉพาะ)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Health check endpoint (สำคัญสำหรับ Render)
 @app.get("/")
-def read_root():
-    return {
-        "message": "🐱 Cat Shop Backend API",
-        "status": "running",
-        "version": "1.0.0",
-        "endpoints": {
-            "docs": "/docs",
-            "health": "/health",
-            "api": "/api"
-        }
-    }
-
+async def root():
+    return {"message": "Cat Shop API is running"}
