@@ -10,11 +10,7 @@ from app.auth.dependencies import verify_firebase_token
 from app.services.detect_cat import detect_cat
 from app.services.analysis_cat import analyze_cat
 
-router = APIRouter(
-    prefix="/api",
-    tags=["Vision - Cat Detection"]
-)
-
+router = APIRouter()
 
 # ============================================
 # REQUEST SCHEMA

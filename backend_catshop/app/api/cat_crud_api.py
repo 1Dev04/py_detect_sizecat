@@ -18,10 +18,7 @@ from app.schemas.cat import (
     AnalysisResultSchema
 )
 
-router = APIRouter(
-    prefix="/api",
-    tags=["System - Cat CRUD"]
-)
+router = APIRouter()
 
 # ============================================
 # CREATE - สร้างข้อมูลแมว
