@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, Depends, status
-from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -7,8 +6,6 @@ import requests
 import os
 from pathlib import Path
 import uuid
-
-from app.db.database import get_db
 from app.auth.dependencies import verify_firebase_token
 from app.services.detect_cat import detect_cat
 from app.services.analysis_cat import analyze_cat
