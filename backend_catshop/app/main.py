@@ -63,10 +63,35 @@ app.include_router(vision_router, prefix="/api")
 
 
 @app.get("/health")
-async def health_check():
-    return {"status": "ok"}
+def health_check():
+    """Health check endpoint for monitoring"""
+    return {
+        "status": "healthy",
+        "service": "catshop-backend"
+    }
 
 
+
+# CORS - อนุญาตทุก origin (production ควรระบุ domain เฉพาะ)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Health check endpoint (สำคัญสำหรับ Render)
 @app.get("/")
-async def root():
-    return {"message": "Cat Shop API is running"}
+def read_root():
+    return {
+        "message": "🐱 Cat Shop Backend API",
+        "status": "running",
+        "version": "1.0.0",
+        "endpoints": {
+            "docs": "/docs",
+            "health": "/health",
+            "api": "/api"
+        }
+    }
+
