@@ -6,11 +6,11 @@ import requests
 import os
 from pathlib import Path
 import uuid
+
 from app.auth.dependencies import verify_firebase_token
 from app.services.detect_cat import detect_cat
 from app.services.analysis_cat import analyze_cat
 from app.db.database import get_db_pool  
-from app.models.dbcat import Cat  
 router = APIRouter()
 
 # ============================================
@@ -28,36 +28,6 @@ class AnalyzeCatRequest(BaseModel):
         }
 
 
-from fastapi import APIRouter, HTTPException, Depends, status
-from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
-import requests
-import os
-from pathlib import Path
-import uuid
-import asyncpg
-
-from app.auth.dependencies import verify_firebase_token
-from app.services.detect_cat import detect_cat
-from app.services.analysis_cat import analyze_cat
-from app.db.database import get_db_pool  # 🔥 เปลี่ยนจาก get_db
-
-router = APIRouter()
-
-# ============================================
-# REQUEST SCHEMA
-# ============================================
-class AnalyzeCatRequest(BaseModel):
-    """Schema สำหรับ request วิเคราะห์แมว"""
-    image_url: str
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "image_url": "https://res.cloudinary.com/.../cat.jpg"
-            }
-        }
 
 # ============================================
 # ANALYZE CAT ENDPOINT
