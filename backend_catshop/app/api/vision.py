@@ -9,6 +9,39 @@ import uuid
 from app.auth.dependencies import verify_firebase_token
 from app.services.detect_cat import detect_cat
 from app.services.analysis_cat import analyze_cat
+from app.db.database import get_db_pool  
+from app.models.dbcat import Cat  
+router = APIRouter()
+
+# ============================================
+# REQUEST SCHEMA
+# ============================================
+class AnalyzeCatRequest(BaseModel):
+    """Schema สำหรับ request วิเคราะห์แมว"""
+    image_url: str
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "image_url": "https://res.cloudinary.com/.../cat.jpg"
+            }
+        }
+
+
+from fastapi import APIRouter, HTTPException, Depends, status
+from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
+import requests
+import os
+from pathlib import Path
+import uuid
+import asyncpg
+
+from app.auth.dependencies import verify_firebase_token
+from app.services.detect_cat import detect_cat
+from app.services.analysis_cat import analyze_cat
+from app.db.database import get_db_pool  # 🔥 เปลี่ยนจาก get_db
 
 router = APIRouter()
 
@@ -36,43 +69,7 @@ async def analyze_cat_endpoint(
     user: dict = Depends(verify_firebase_token)
 ):
     """
-    🐱 **วิเคราะห์แมวจากรูปภาพ**
-    
-    **ขั้นตอน:**
-    1. ดาวน์โหลดรูปภาพจาก URL
-    2. ตรวจจับแมวด้วย YOLO (detect_cat)
-    3. วิเคราะห์ขนาดแมวด้วย CatAnalyzer (analyze_cat)
-    4. ส่งผลกลับในรูปแบบที่ Flutter ต้องการ
-    
-    **Authentication:** Firebase ID Token required
-    
-    **Request Body:**
-```json
-    {
-        "image_url": "https://res.cloudinary.com/.../cat.jpg"
-    }
-```
-    
-    **Response:**
-```json
-    {
-        "is_cat": true,
-        "confidence": 0.87,
-        "message": "✅ พบแมวในภาพแล้ว!",
-        "name": "orange_white",
-        "breed": "domestic_shorthair",
-        "age": null,
-        "weight": 4.5,
-        "size_category": "M",
-        "chest_cm": 35.5,
-        "neck_cm": 22.0,
-        "body_length_cm": 45.0,
-        "bounding_box": [100, 150, 400, 450],
-        "image_url": "...",
-        "thumbnail_url": null,
-        "detected_at": "2025-02-11T10:30:00Z"
-    }
-```
+    🐱 **วิเคราะห์แมวจากรูปภาพและบันทึกลง DB**
     """
     
     try:
@@ -107,7 +104,7 @@ async def analyze_cat_endpoint(
         temp_dir = Path("/tmp/cat_images")
         temp_dir.mkdir(exist_ok=True)
         
-        # สร้างชื่อไฟล์ชั่วคราวที่ไม่ซ้ำกัน
+        # สร้างชื่อไฟล์ชั่วคราว
         temp_filename = f"cat_{uuid.uuid4()}.jpg"
         temp_path = temp_dir / temp_filename
         
@@ -131,7 +128,7 @@ async def analyze_cat_endpoint(
             print(f"   - confidence: {detect_result.get('confidence')}")
             print(f"   - bounding_box: {detect_result.get('bounding_box')}")
             
-            # ถ้าไม่พบแมว
+            # ❌ ถ้าไม่พบแมว → หยุดทันที
             if not detect_result.get("is_cat"):
                 print("❌ No cat detected in image")
                 return {
@@ -153,7 +150,7 @@ async def analyze_cat_endpoint(
                 image_path=str(temp_path),
                 bounding_box=bounding_box,
                 firebase_uid=firebase_uid,
-                cat_color=None,  # จะถูก detect อัตโนมัติ
+                cat_color=None,
                 breed="unknown",
                 age_category="adult"
             )
@@ -162,40 +159,99 @@ async def analyze_cat_endpoint(
             print(f"   - cat_color: {analysis_result.get('cat_color')}")
             print(f"   - weight_kg: {analysis_result.get('weight_kg')}")
             print(f"   - size_category: {analysis_result.get('size_category')}")
-            print(f"   - confidence: {analysis_result.get('confidence')}")
             
             # ========================================
-            # STEP 4: Format Response for Flutter
+            # 🔥 STEP 4: Save to Database (asyncpg)
             # ========================================
-            print("\n--- STEP 4: Formatting Response ---")
+            print("\n--- STEP 4: Saving to Database ---")
             
             measurements = analysis_result.get('measurements', {})
             
+            # Get DB pool
+            pool = await get_db_pool()
+            
+            # Insert to database
+            async with pool.acquire() as conn:
+                cat_id = await conn.fetchval(
+                    """
+                    INSERT INTO cats (
+                        firebase_uid, name, breed, age,
+                        weight, size_category,
+                        chest_cm, neck_cm, waist_cm, 
+                        body_length_cm, back_length_cm, leg_length_cm,
+                        body_condition_score, body_condition, body_condition_description,
+                        bmi, confidence, bounding_box,
+                        posture, quality_flag,
+                        image_url, thumbnail_url,
+                        analysis_version, analysis_method,
+                        detected_at, created_at, updated_at
+                    ) VALUES (
+                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+                        $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27
+                    ) RETURNING id
+                    """,
+                    firebase_uid,
+                    analysis_result.get("cat_color", "Unknown"),  # name
+                    analysis_result.get("breed"),  # breed
+                    None,  # age
+                    float(analysis_result.get("weight_kg", 0.0)),  # weight
+                    analysis_result.get("size_category", "Unknown"),  # size_category
+                    float(measurements.get("chest_cm", 0.0)),  # chest_cm
+                    float(measurements.get("neck_cm")) if measurements.get("neck_cm") else None,  # neck_cm
+                    float(measurements.get("waist_cm")) if measurements.get("waist_cm") else None,  # waist_cm
+                    float(measurements.get("body_length_cm")) if measurements.get("body_length_cm") else None,  # body_length_cm
+                    float(measurements.get("back_length_cm")) if measurements.get("back_length_cm") else None,  # back_length_cm
+                    float(measurements.get("leg_length_cm")) if measurements.get("leg_length_cm") else None,  # leg_length_cm
+                    analysis_result.get("body_condition_score"),  # body_condition_score
+                    analysis_result.get("body_condition"),  # body_condition
+                    analysis_result.get("body_condition_description"),  # body_condition_description
+                    analysis_result.get("bmi"),  # bmi
+                    float(detect_result.get("confidence", 0.0)),  # confidence
+                    bounding_box,  # bounding_box (list)
+                    analysis_result.get("posture"),  # posture
+                    analysis_result.get("quality_flag"),  # quality_flag
+                    request.image_url,  # image_url
+                    None,  # thumbnail_url
+                    analysis_result.get("analysis_version"),  # analysis_version
+                    analysis_result.get("analysis_method"),  # analysis_method
+                    datetime.utcnow(),  # detected_at
+                    datetime.utcnow(),  # created_at
+                    datetime.utcnow()   # updated_at
+                )
+            
+            print(f"✅ Saved to database with ID: {cat_id}")
+            
+            # ========================================
+            # STEP 5: Format Response for Flutter
+            # ========================================
+            print("\n--- STEP 5: Formatting Response ---")
+            
             response_data = {
-                # ✅ Detection info
+                # Detection info
                 "is_cat": True,
                 "confidence": float(detect_result.get("confidence", 0.0)),
                 "message": "✅ พบแมวในภาพแล้ว!",
                 
-                # ✅ CatData fields (ตรงกับ Flutter)
-                "name": analysis_result.get("cat_color", "Unknown"),  # Flutter ใช้ 'name' สำหรับสี
-                "breed": analysis_result.get("breed", None),
-                "age": None,  # ไม่สามารถ detect อายุจากรูปได้
+                # CatData fields
+                "id": cat_id,  # 🔥 ID จาก DB
+                "name": analysis_result.get("cat_color", "Unknown"),
+                "breed": analysis_result.get("breed"),
+                "age": None,
                 "weight": float(analysis_result.get("weight_kg", 0.0)),
                 "size_category": analysis_result.get("size_category", "Unknown"),
                 
-                # ✅ Measurements (แกะออกจาก dict)
+                # Measurements
                 "chest_cm": float(measurements.get("chest_cm", 0.0)),
-                "neck_cm": float(measurements.get("neck_cm", 0.0)) if measurements.get("neck_cm") else None,
-                "body_length_cm": float(measurements.get("body_length_cm", 0.0)) if measurements.get("body_length_cm") else None,
+                "neck_cm": float(measurements.get("neck_cm")) if measurements.get("neck_cm") else None,
+                "body_length_cm": float(measurements.get("body_length_cm")) if measurements.get("body_length_cm") else None,
                 
-                # ✅ Additional info
+                # Additional info
                 "bounding_box": bounding_box,
                 "image_url": request.image_url,
-                "thumbnail_url": None,  # ยังไม่มี thumbnail
+                "thumbnail_url": None,
                 "detected_at": datetime.utcnow().isoformat() + "Z",
                 
-                # 🔥 Extra: ข้อมูลเพิ่มเติม (ไม่บังคับ)
+                # Extra details
                 "analysis_details": {
                     "posture": analysis_result.get("posture"),
                     "quality_flag": analysis_result.get("quality_flag"),
@@ -213,9 +269,7 @@ async def analyze_cat_endpoint(
             return response_data
             
         finally:
-            # ========================================
             # CLEANUP: ลบไฟล์ชั่วคราว
-            # ========================================
             if temp_path.exists():
                 temp_path.unlink()
                 print(f"🗑️ Cleaned up temp file: {temp_path}")

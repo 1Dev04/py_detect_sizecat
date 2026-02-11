@@ -401,7 +401,7 @@ def get_all_cats_admin(
 # 🔥 NEW ENDPOINT - บันทึกผลการวิเคราะห์ 
 # ============================================
 
-@router.post("/system/analysis/analyze-and-save", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post("/system/analysis/save", response_model=dict, status_code=status.HTTP_201_CREATED)
 def analyze_and_save_cat(
     image_path: str,
     bounding_box: List[float],
