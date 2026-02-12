@@ -5,14 +5,35 @@ import numpy as np
 from typing import Dict, Optional
 from pathlib import Path
 
-# 🔥 CRITICAL: Import torch first, then add safe globals BEFORE importing YOLO
+# 🔥 CRITICAL: Import torch first, then add ALL safe globals BEFORE importing YOLO
 import torch
+import torch.nn as nn
 
-# 🔥 FIX: Import the actual class, not string
-from ultralytics.nn.tasks import DetectionModel
-torch.serialization.add_safe_globals([DetectionModel])
+# 🔥 PyTorch 2.10+ requires these safe globals for YOLO models
+torch.serialization.add_safe_globals([
+    # Core PyTorch modules needed by YOLO
+    nn.modules.container.Sequential,
+    nn.modules.conv.Conv2d,
+    nn.modules.batchnorm.BatchNorm2d,
+    nn.modules.activation.SiLU,
+    nn.modules.activation.ReLU,
+    nn.modules.activation.LeakyReLU,
+    nn.modules.activation.Sigmoid,
+    nn.modules.pooling.MaxPool2d,
+    nn.modules.pooling.AdaptiveAvgPool2d,
+    nn.modules.linear.Linear,
+    nn.modules.dropout.Dropout,
+    nn.modules.upsampling.Upsample,
+    nn.modules.padding.ZeroPad2d,
+    nn.modules.container.ModuleList,
+])
 
+# Import ultralytics AFTER setting safe globals
 from ultralytics import YOLO
+from ultralytics.nn.tasks import DetectionModel
+
+# Add ultralytics-specific classes
+torch.serialization.add_safe_globals([DetectionModel])
 
 
 class CatDetector:
@@ -62,7 +83,7 @@ class CatDetector:
             {
                 "is_valid": bool,
                 "reason": str or None,
-                "details": dict  # 🔥 เพิ่มรายละเอียด
+                "details": dict
             }
         """
         h, w = image.shape[:2]
@@ -246,7 +267,7 @@ class CatDetector:
             
             result = {
                 "is_cat": True,
-                "confidence": round(best_cat["confidence"], 4),  # 🔥 4 ตำแหน่งทศนิยม
+                "confidence": round(best_cat["confidence"], 4),
                 "bounding_box": best_cat["bbox"],
                 "total_cats_detected": len(cats),
                 "image_quality": quality,
