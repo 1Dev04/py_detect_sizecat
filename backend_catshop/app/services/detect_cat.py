@@ -7,7 +7,10 @@ from pathlib import Path
 
 # 🔥 CRITICAL: Import torch first, then add safe globals BEFORE importing YOLO
 import torch
-torch.serialization.add_safe_globals(['ultralytics.nn.tasks.DetectionModel'])
+
+# 🔥 FIX: Import the actual class, not string
+from ultralytics.nn.tasks import DetectionModel
+torch.serialization.add_safe_globals([DetectionModel])
 
 from ultralytics import YOLO
 
