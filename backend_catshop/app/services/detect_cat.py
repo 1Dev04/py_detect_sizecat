@@ -1,32 +1,9 @@
 """Cat Detect Service - Optimized for FastAPI + Flutter"""
-
+from ultralytics import YOLO
 import cv2
 import numpy as np
 from typing import Dict, Optional
 from pathlib import Path
-
-# 🔥 SOLUTION: Patch ultralytics to use weights_only=False for PyTorch 2.10+
-import torch
-
-# Import ultralytics modules
-from ultralytics import YOLO
-import ultralytics.nn.tasks as tasks
-
-# 🔥 Monkey-patch torch_safe_load to disable weights_only
-original_torch_safe_load = tasks.torch_safe_load
-
-def patched_torch_safe_load(weight):
-    """Patched version that forces weights_only=False for YOLO models"""
-    try:
-        # Try loading with weights_only=False (safe for official YOLO models)
-        return torch.load(weight, map_location="cpu", weights_only=False), weight
-    except Exception as e:
-        print(f"⚠️ Fallback to original torch_safe_load: {e}")
-        return original_torch_safe_load(weight)
-
-# Apply the patch
-tasks.torch_safe_load = patched_torch_safe_load
-print("✅ Applied PyTorch 2.10 compatibility patch for YOLO")
 
 
 class CatDetector:
@@ -76,7 +53,7 @@ class CatDetector:
             {
                 "is_valid": bool,
                 "reason": str or None,
-                "details": dict
+                "details": dict  # 🔥 เพิ่มรายละเอียด
             }
         """
         h, w = image.shape[:2]
@@ -260,7 +237,7 @@ class CatDetector:
             
             result = {
                 "is_cat": True,
-                "confidence": round(best_cat["confidence"], 4),
+                "confidence": round(best_cat["confidence"], 4),  # 🔥 4 ตำแหน่งทศนิยม
                 "bounding_box": best_cat["bbox"],
                 "total_cats_detected": len(cats),
                 "image_quality": quality,

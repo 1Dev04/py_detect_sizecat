@@ -1,19 +1,25 @@
+# --- Core API ---
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 
+# --- DB / Config ---
 asyncpg>=0.29.0,<0.31
 python-dotenv==1.0.0
+sqlalchemy>=2.0
 
+# --- Auth / Cloud ---
 firebase-admin==6.3.0
 cloudinary==1.32.0
-
-pydantic>=2.4,<3.0
-pydantic-settings>=2.0,<3.0
 PyJWT
 
-Pillow>=10.0.0
-opencv-python-headless
+# --- Validation ---
+pydantic>=2.4,<3.0
+pydantic-settings>=2.0,<3.0
 
+# --- Image / ML ---
 numpy==1.26.4
+Pillow>=10.0.0
+opencv-python-headless==4.9.0.80
+
+# --- YOLO ---
 ultralytics==8.1.0
-sqlalchemy>=2.0
