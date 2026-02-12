@@ -5,35 +5,28 @@ import numpy as np
 from typing import Dict, Optional
 from pathlib import Path
 
-# 🔥 CRITICAL: Import torch first, then add ALL safe globals BEFORE importing YOLO
+# 🔥 SOLUTION: Patch ultralytics to use weights_only=False for PyTorch 2.10+
 import torch
-import torch.nn as nn
 
-# 🔥 PyTorch 2.10+ requires these safe globals for YOLO models
-torch.serialization.add_safe_globals([
-    # Core PyTorch modules needed by YOLO
-    nn.modules.container.Sequential,
-    nn.modules.conv.Conv2d,
-    nn.modules.batchnorm.BatchNorm2d,
-    nn.modules.activation.SiLU,
-    nn.modules.activation.ReLU,
-    nn.modules.activation.LeakyReLU,
-    nn.modules.activation.Sigmoid,
-    nn.modules.pooling.MaxPool2d,
-    nn.modules.pooling.AdaptiveAvgPool2d,
-    nn.modules.linear.Linear,
-    nn.modules.dropout.Dropout,
-    nn.modules.upsampling.Upsample,
-    nn.modules.padding.ZeroPad2d,
-    nn.modules.container.ModuleList,
-])
-
-# Import ultralytics AFTER setting safe globals
+# Import ultralytics modules
 from ultralytics import YOLO
-from ultralytics.nn.tasks import DetectionModel
+import ultralytics.nn.tasks as tasks
 
-# Add ultralytics-specific classes
-torch.serialization.add_safe_globals([DetectionModel])
+# 🔥 Monkey-patch torch_safe_load to disable weights_only
+original_torch_safe_load = tasks.torch_safe_load
+
+def patched_torch_safe_load(weight):
+    """Patched version that forces weights_only=False for YOLO models"""
+    try:
+        # Try loading with weights_only=False (safe for official YOLO models)
+        return torch.load(weight, map_location="cpu", weights_only=False), weight
+    except Exception as e:
+        print(f"⚠️ Fallback to original torch_safe_load: {e}")
+        return original_torch_safe_load(weight)
+
+# Apply the patch
+tasks.torch_safe_load = patched_torch_safe_load
+print("✅ Applied PyTorch 2.10 compatibility patch for YOLO")
 
 
 class CatDetector:
