@@ -11,6 +11,7 @@ from app.auth.login import router as login_router
 from app.auth.register import router as sign_up_router
 from app.db.database import create_db_pool, close_db_pool
 from app.core.firebase import init_firebase
+from app.services.detect_cat import get_detector  
 
 
 @asynccontextmanager
@@ -28,6 +29,18 @@ async def lifespan(app: FastAPI):
         print("✅ Firebase initialized")
     except Exception as e:
         print(f"⚠️ Firebase skipped: {e}")
+
+    # --- YOLO Cat Detector --- 🔥 เพิ่มส่วนนี้
+    try:
+        print("🐱 Initializing YOLO Cat Detector...")
+        detector = get_detector()
+        print(f"🐱---{detector}")
+        print("✅ YOLO Cat Detector ready")
+    except Exception as e:
+        print(f"❌ Failed to initialize YOLO: {e}")
+        import traceback
+        traceback.print_exc()
+        # ไม่ raise error เพื่อให้ server ยังรันได้
 
     print("🚀 App startup complete")
     yield
@@ -61,7 +74,6 @@ app.include_router(search_router, prefix="/api")
 app.include_router(login_router, prefix="/api")
 app.include_router(sign_up_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
-
 
 
 @app.get("/health")
