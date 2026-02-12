@@ -153,7 +153,7 @@ async def analyze_cat_endpoint(
                         posture, quality_flag,
                         image_url, thumbnail_url,
                         analysis_version, analysis_method,
-                        detected_at, created_at, updated_at
+                        detected_at, updated_at
                     ) VALUES (
                         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
                         $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27
@@ -184,7 +184,6 @@ async def analyze_cat_endpoint(
                     analysis_result.get("analysis_version"),  # analysis_version
                     analysis_result.get("analysis_method"),  # analysis_method
                     datetime.utcnow(),  # detected_at
-                    datetime.utcnow(),  # created_at
                     datetime.utcnow()   # updated_at
                 )
             
