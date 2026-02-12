@@ -43,7 +43,7 @@ async def analyze_cat_endpoint(
     
     try:
         # 🔐 ดึง firebase_uid จาก token
-        firebase_uid = user.get("uid")
+        firebase_uid = user.get("firebase_uid")
         
         if not firebase_uid:
             raise HTTPException(
@@ -143,8 +143,8 @@ async def analyze_cat_endpoint(
             async with pool.acquire() as conn:
                 cat_id = await conn.fetchval(
                     """
-                    INSERT INTO cats (
-                        firebase_uid, name, breed, age,
+                    INSERT INTO cat (
+                        firebase_uid, cat_color, breed, age,
                         weight, size_category,
                         chest_cm, neck_cm, waist_cm, 
                         body_length_cm, back_length_cm, leg_length_cm,
@@ -203,7 +203,7 @@ async def analyze_cat_endpoint(
                 
                 # CatData fields
                 "id": cat_id,  # 🔥 ID จาก DB
-                "name": analysis_result.get("cat_color", "Unknown"),
+                "cat_color": analysis_result.get("cat_color", "Unknown"),
                 "breed": analysis_result.get("breed"),
                 "age": None,
                 "weight": float(analysis_result.get("weight_kg", 0.0)),
