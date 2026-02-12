@@ -5,7 +5,7 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-@router.post("/login")
+@router.post("/auth/login")
 async def login(
     user_info: dict = Depends(verify_firebase_token),
     db = Depends(get_db_pool),

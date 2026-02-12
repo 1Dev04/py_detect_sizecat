@@ -5,7 +5,7 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-@router.post("/register")
+@router.post("/auth/register")
 async def register(
     user_info: dict = Depends(verify_firebase_token),
     db = Depends(get_db_pool),
